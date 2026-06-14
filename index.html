@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strip Comments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000;
+      --panel: #080808;
+      --stroke: rgba(255,255,255,0.12);
+      --stroke-hi: rgba(255,255,255,0.4);
+      --text: #f0f0f0;
+      --text-dim: rgba(255,255,255,0.5);
+      --text-muted: rgba(255,255,255,0.22);
+      --accent: #ffffff;
+      --radius: 8px;
+      --font: 'Inter', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 48px 20px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--stroke-hi);
+      border-radius: 10px;
+      background: linear-gradient(135deg, #141414, #000);
+      margin-bottom: 16px;
+      color: var(--text-dim);
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      letter-spacing: 0.02em;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 580px;
+      background: linear-gradient(160deg, #0d0d0d, #000);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .drop-zone {
+      padding: 48px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--stroke);
+      position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .drop-zone.drag-over {
+      border-bottom-color: var(--stroke-hi);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      background: linear-gradient(135deg, #111, #000);
+    }
+
+    .drop-label {
+      font-size: 13px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .drop-label strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .drop-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .options {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-bottom: 1px solid var(--stroke);
+    }
+
+    .options-title {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .opt-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .opt-label {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .toggle {
+      width: 34px;
+      height: 18px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--stroke);
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .toggle.on {
+      background: rgba(255,255,255,0.18);
+      border-color: var(--stroke-hi);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .toggle.on::after {
+      transform: translateX(16px);
+      background: var(--text);
+    }
+
+    .actions {
+      padding: 16px 20px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: #000;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: rgba(255,255,255,0.85);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--stroke);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--stroke-hi);
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .btn-ghost:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 580px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-family: var(--mono);
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status.show { display: flex; }
+
+    .status.ok {
+      background: rgba(110,231,183,0.07);
+      border: 1px solid rgba(110,231,183,0.25);
+      color: #6ee7b7;
+    }
+
+    .status.err {
+      background: rgba(255,107,107,0.07);
+      border: 1px solid rgba(255,107,107,0.25);
+      color: #ff6b6b;
+    }
+
+    .status.info {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--stroke);
+      color: var(--text-dim);
+    }
+
+    .stat-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .filename-badge {
+      margin-top: 12px;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--stroke);
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 580px;
+    }
+
+    .filename-badge.show { display: flex; }
+
+    .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fsize { color: var(--text-muted); flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+        <line x1="18" y1="9" x2="21" y2="6"/><line x1="18" y1="3" x2="21" y2="6"/>
+      </svg>
+    </div>
+    <h1>Comment Stripper</h1>
+    <p class="sub">Upload an HTML file — get it back clean, with all comments removed</p>
+  </header>
+
+  <div class="card">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".html,.htm">
+      <div class="drop-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </div>
+      <div class="drop-label"><strong>Drop your HTML file here</strong><br>or click to browse</div>
+      <div class="drop-hint">.html / .htm</div>
+    </div>
+
+    <div class="options">
+      <div class="options-title">What to strip</div>
+      <div class="opt-row">
+        <span class="opt-label">HTML comments &nbsp;<code style="font-size:10px;opacity:0.5;">&lt;!-- … --&gt;</code></span>
+        <div class="toggle on" id="tog-html" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">JS line comments &nbsp;<code style="font-size:10px;opacity:0.5;">// …</code></span>
+        <div class="toggle on" id="tog-jsl" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">JS / CSS block comments &nbsp;<code style="font-size:10px;opacity:0.5;">/* … */</code></span>
+        <div class="toggle on" id="tog-block" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">Collapse empty lines left behind</span>
+        <div class="toggle on" id="tog-empty" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" id="btnPreview" disabled onclick="doPreview()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
+        Preview
+      </button>
+      <button class="btn btn-primary" id="btnDownload" disabled onclick="doDownload()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Clean File
+      </button>
+    </div>
+  </div>
+
+  <div class="filename-badge" id="filenameBadge">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span class="fname" id="badgeName"></span>
+    <span class="fsize" id="badgeSize"></span>
+  </div>
+
+  <div class="status" id="statusBar">
+    <div class="stat-dot"></div>
+    <span id="statusMsg"></span>
+  </div>
+
+  <script>
+    let rawContent = '';
+    let originalName = '';
+
+    const fileInput   = document.getElementById('fileInput');
+    const dropZone    = document.getElementById('dropZone');
+    const btnDownload = document.getElementById('btnDownload');
+    const btnPreview  = document.getElementById('btnPreview');
+    const statusBar   = document.getElementById('statusBar');
+    const statusMsg   = document.getElementById('statusMsg');
+    const filenameBadge = document.getElementById('filenameBadge');
+
+    fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) loadFile(f);
+    });
+
+    function loadFile(file) {
+      if (!file) return;
+      if (!file.name.match(/\.html?$/i)) {
+        setStatus('err', 'Please upload an .html or .htm file.');
+        return;
+      }
+      originalName = file.name;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        rawContent = ev.target.result;
+        btnDownload.disabled = false;
+        btnPreview.disabled = false;
+        document.getElementById('badgeName').textContent = file.name;
+        document.getElementById('badgeSize').textContent = fmtSize(file.size);
+        filenameBadge.classList.add('show');
+        setStatus('ok', `Loaded — ${countComments(rawContent)} comment block(s) detected.`);
+      };
+      reader.readAsText(file);
+    }
+
+    function getToggles() {
+      return {
+        html:  document.getElementById('tog-html').classList.contains('on'),
+        jsl:   document.getElementById('tog-jsl').classList.contains('on'),
+        block: document.getElementById('tog-block').classList.contains('on'),
+        empty: document.getElementById('tog-empty').classList.contains('on'),
+      };
+    }
+
+    function stripComments(src, opts) {
+      let out = src;
+
+      if (opts.html) {
+        out = out.replace(/<!--[\s\S]*?-->/g, '');
+      }
+
+      if (opts.block || opts.jsl) {
+        out = processScriptAndStyle(out, opts);
+      }
+
+      if (opts.empty) {
+        out = out.replace(/^[ \t]*\n/gm, '\n');
+        out = out.replace(/\n{3,}/g, '\n\n');
+      }
+
+      return out;
+    }
+
+    function processScriptAndStyle(src, opts) {
+      const tagRe = /(<(script|style)[\s\S]*?>)([\s\S]*?)(<\/\2>)/gi;
+      return src.replace(tagRe, (match, open, tag, body, close) => {
+        let stripped = body;
+        if (opts.block) {
+          stripped = stripBlockComments(stripped);
+        }
+        if (opts.jsl && tag.toLowerCase() === 'script') {
+          stripped = stripLineComments(stripped);
+        }
+        if (opts.jsl && tag.toLowerCase() === 'style') {
+          stripped = stripLineCommentsCSS(stripped);
+        }
+        return open + stripped + close;
+      });
+    }
+
+    function stripBlockComments(code) {
+      let out = '';
+      let i = 0;
+      while (i < code.length) {
+        if (code[i] === '/' && code[i+1] === '*') {
+          const end = code.indexOf('*/', i + 2);
+          i = end === -1 ? code.length : end + 2;
+        } else if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+          const q = code[i];
+          out += code[i++];
+          while (i < code.length) {
+            if (code[i] === '\\') { out += code[i++]; out += code[i++]; continue; }
+            out += code[i];
+            if (code[i++] === q) break;
+          }
+        } else {
+          out += code[i++];
+        }
+      }
+      return out;
+    }
+
+    function stripLineComments(code) {
+      let out = '';
+      let i = 0;
+      while (i < code.length) {
+        if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+          const q = code[i];
+          out += code[i++];
+          while (i < code.length) {
+            if (code[i] === '\\') { out += code[i++]; out += code[i++]; continue; }
+            out += code[i];
+            if (code[i++] === q) break;
+          }
+        } else if (code[i] === '/' && code[i+1] === '/') {
+          while (i < code.length && code[i] !== '\n') i++;
+        } else {
+          out += code[i++];
+        }
+      }
+      return out;
+    }
+
+    function stripLineCommentsCSS(code) {
+      return code;
+    }
+
+    function countComments(src) {
+      const html  = (src.match(/<!--[\s\S]*?-->/g) || []).length;
+      const block = (src.match(/\/\*[\s\S]*?\*\//g) || []).length;
+      const line  = (src.match(/\/\/[^\n]*/g) || []).length;
+      return html + block + line;
+    }
+
+    function fmtSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+      return (bytes/(1024*1024)).toFixed(2) + ' MB';
+    }
+
+    function doDownload() {
+      if (!rawContent) return;
+      const opts = getToggles();
+      const clean = stripComments(rawContent, opts);
+      const before = rawContent.length;
+      const after  = clean.length;
+      const saved  = ((before - after) / before * 100).toFixed(1);
+
+      const blob = new Blob([clean], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const base = originalName.replace(/\.html?$/i, '');
+      a.href     = url;
+      a.download = base + '.clean.html';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setStatus('ok', `Done — ${fmtSize(before)} → ${fmtSize(after)} (${saved}% smaller)`);
+    }
+
+    function doPreview() {
+      if (!rawContent) return;
+      const opts  = getToggles();
+      const clean = stripComments(rawContent, opts);
+      const win   = window.open('', '_blank');
+      win.document.write(clean);
+      win.document.close();
+    }
+
+    function setStatus(type, msg) {
+      statusBar.className = 'status show ' + type;
+      statusMsg.textContent = msg;
+    }
+  </script>
+</body>
+</html>
