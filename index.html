@@ -94,6 +94,7 @@
   </style>
   <!-- Three.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 
 <body>
@@ -153,52 +154,34 @@
 
         const GRID_SIZE = 12;
 
-        // Parse Blockbench .bbmodel JSON format
-        async function loadBlockModel() {
-            try {
-                const response = await fetch('Block.bbmodel');
-                if (!response.ok) throw new Error('File not found');
-                const bbData = await response.json();
-                
-                const modelGroup = new THREE.Group();
-                if (bbData.elements && bbData.elements.length > 0) {
-                    bbData.elements.forEach(el => {
-                        const [x1, y1, z1] = el.from;
-                        const [x2, y2, z2] = el.to;
-                        const dx = (x2 - x1) / 16;
-                        const dy = (y2 - y1) / 16;
-                        const dz = (z2 - z1) / 16;
-
-                        const geom = new THREE.BoxGeometry(dx, dy, dz);
-                        const mat = new THREE.MeshStandardMaterial({ 
-                            color: el.color ? parseInt(el.color.replace('#', '0x')) : 0x55aa55, 
-                            roughness: 0.7 
+        // Load Block.gltf model using GLTFLoader
+        function loadBlockModel() {
+            return new Promise((resolve) => {
+                const loader = new THREE.GLTFLoader();
+                loader.load(
+                    'Block.gltf',
+                    (gltf) => {
+                        const modelGroup = gltf.scene;
+                        modelGroup.traverse((child) => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
                         });
+                        resolve(modelGroup);
+                    },
+                    undefined,
+                    (error) => {
+                        // Fallback geometry if Block.gltf fails or is blocked by CORS
+                        const geom = new THREE.BoxGeometry(1, 1, 1);
+                        const mat = new THREE.MeshStandardMaterial({ color: 0x55aa55, roughness: 0.7 });
                         const mesh = new THREE.Mesh(geom, mat);
                         mesh.castShadow = true;
                         mesh.receiveShadow = true;
-                        
-                        // Align 16x16 voxel space to Three.js world units
-                        mesh.position.set(
-                            (x1 + x2) / 32 - 0.5,
-                            (y1 + y2) / 32 - 0.5,
-                            (z1 + z2) / 32 - 0.5
-                        );
-                        modelGroup.add(mesh);
-                    });
-                } else {
-                    throw new Error('No elements in bbmodel');
-                }
-                return modelGroup;
-            } catch (err) {
-                // Fallback geometry if Block.bbmodel fails or is opened directly via file://
-                const geom = new THREE.BoxGeometry(1, 1, 1);
-                const mat = new THREE.MeshStandardMaterial({ color: 0x55aa55, roughness: 0.7 });
-                const mesh = new THREE.Mesh(geom, mat);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                return mesh;
-            }
+                        resolve(mesh);
+                    }
+                );
+            });
         }
 
         // Build ground grid
